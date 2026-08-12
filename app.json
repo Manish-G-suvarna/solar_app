@@ -1,21 +1,23 @@
 {
   "expo": {
-    "name": "solar_app",
-    "slug": "solar_app",
+    "name": "SolarFlow - Smart Solar Monitoring",
+    "slug": "solarflow-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "backgroundColor": "#F4F7F5",
+    "primaryColor": "#0E5C41",
+    "splash": {
+      "backgroundColor": "#FFFFFF",
+      "resizeMode": "contain"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.solarflow.app"
     },
     "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      "package": "com.solarflow.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
