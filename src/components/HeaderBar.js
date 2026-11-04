@@ -7,6 +7,10 @@ import { useApp } from '../context/AppContext';
 export const HeaderBar = ({
   title,
   showBack = true,
+  leftIcon,
+  onLeftPress,
+  showMenu = false,
+  leftComponent,
   onBackPress,
   navigation,
   rightIcon,
@@ -19,6 +23,14 @@ export const HeaderBar = ({
       onBackPress();
     } else if (navigation && navigation.canGoBack()) {
       navigation.goBack();
+    }
+  };
+
+  const handleLeft = () => {
+    if (onLeftPress) {
+      onLeftPress();
+    } else if (navigation) {
+      navigation.navigate('Dashboard');
     }
   };
 
@@ -36,10 +48,18 @@ export const HeaderBar = ({
         <TouchableOpacity style={styles.iconBtn} onPress={handleBack} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={24} color={Colors.primaryDark} />
         </TouchableOpacity>
-      ) : (
+      ) : leftIcon ? (
+        <TouchableOpacity style={styles.iconBtn} onPress={handleLeft} activeOpacity={0.7}>
+          <Ionicons name={leftIcon} size={22} color={Colors.primary} />
+        </TouchableOpacity>
+      ) : leftComponent ? (
+        leftComponent
+      ) : showMenu ? (
         <TouchableOpacity style={styles.iconBtn} onPress={() => navigation?.openDrawer?.()} activeOpacity={0.7}>
           <Ionicons name="menu-outline" size={26} color={Colors.primaryDark} />
         </TouchableOpacity>
+      ) : (
+        <View style={styles.placeholderBtn} />
       )}
 
       <Text style={styles.title} numberOfLines={1}>
@@ -107,5 +127,9 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 10,
     fontWeight: '700',
+  },
+  placeholderBtn: {
+    width: 40,
+    height: 40,
   },
 });

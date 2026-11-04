@@ -14,6 +14,9 @@ export const LivePanelStatusScreen = ({ navigation }) => {
     panelAngle,
     isCoolingActive,
     isCleaningActive,
+    pumpOn,
+    espConfig,
+    temperature,
   } = useApp();
 
   return (
@@ -26,10 +29,10 @@ export const LivePanelStatusScreen = ({ navigation }) => {
           <View style={styles.connectionLeft}>
             <View style={styles.onlineDot} />
             <Text style={styles.connectionText}>
-              Connection <Text style={{ fontWeight: '700' }}>{systemOnline ? 'Online' : 'Offline'}</Text>
+              ESP32 Tracker <Text style={{ fontWeight: '700' }}>{espConfig?.connected ? `Online (${espConfig.ip})` : 'Offline (Sim)'}</Text>
             </Text>
           </View>
-          <Feather name="wifi" size={18} color={Colors.success} />
+          <Feather name="wifi" size={18} color={espConfig?.connected ? Colors.success : Colors.warning} />
         </View>
 
         {/* Solar Panel Live View Hero Card */}
@@ -120,6 +123,23 @@ export const LivePanelStatusScreen = ({ navigation }) => {
             <StatusBadge
               type={isCoolingActive ? 'Active' : 'Idle'}
               label={isCoolingActive ? 'Active' : 'Off'}
+            />
+          </TouchableOpacity>
+
+          {/* Water Pump Relay (Pin 26) */}
+          <TouchableOpacity
+            style={styles.metricRow}
+            onPress={() => navigation.navigate('Cleaning')}
+          >
+            <View style={styles.metricLeft}>
+              <View style={[styles.iconBox, { backgroundColor: pumpOn ? '#DCFCE7' : '#F1F5F9' }]}>
+                <Ionicons name="water-outline" size={20} color={pumpOn ? Colors.primary : Colors.textMuted} />
+              </View>
+              <Text style={styles.metricLabel}>Water Pump (Pin 26)</Text>
+            </View>
+            <StatusBadge
+              type={pumpOn ? 'Active' : 'Idle'}
+              label={pumpOn ? 'Pumping (ON)' : 'Standby (OFF)'}
             />
           </TouchableOpacity>
 

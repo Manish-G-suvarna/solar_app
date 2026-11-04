@@ -8,10 +8,6 @@
     "userInterfaceStyle": "light",
     "backgroundColor": "#F4F7F5",
     "primaryColor": "#0E5C41",
-    "splash": {
-      "backgroundColor": "#FFFFFF",
-      "resizeMode": "contain"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.solarflow.app"
@@ -21,6 +17,17 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow SolarFlow to access your location to fetch real-time weather and temperature for your solar system."
+        }
+      ],
+      "expo-font",
+      "expo-status-bar"
+    ]
   }
 }
