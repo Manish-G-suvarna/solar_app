@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
 import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AppContext = createContext();
 
@@ -33,8 +34,69 @@ const parseWeatherData = (data) => ({
 
 export const AppProvider = ({ children }) => {
   // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState({ name: 'Alex Johnson', email: 'alex@solarflow.io' });
+  const [isAuthenticated, setIsAuthenticatedState] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [user, setUserState] = useState({ name: 'Alex Johnson', email: 'alex@solarguard.io' });
+
+  // On mount, restore persisted authentication session
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const storedAuth = await AsyncStorage.getItem('@solarguard_auth');
+        const storedUser = await AsyncStorage.getItem('@solarguard_user');
+        if (isMounted) {
+          if (storedAuth === 'true') {
+            setIsAuthenticatedState(true);
+          }
+          if (storedUser) {
+            try {
+              setUserState(JSON.parse(storedUser));
+            } catch (e) {}
+          }
+        }
+      } catch (err) {
+        console.warn('Could not restore auth session:', err);
+      } finally {
+        if (isMounted) {
+          setIsAuthLoading(false);
+        }
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const setIsAuthenticated = useCallback(async (val) => {
+    setIsAuthenticatedState(val);
+    try {
+      if (val) {
+        await AsyncStorage.setItem('@solarguard_auth', 'true');
+      } else {
+        await AsyncStorage.removeItem('@solarguard_auth');
+      }
+    } catch (e) {
+      console.warn('Failed to persist auth status:', e);
+    }
+  }, []);
+
+  const setUser = useCallback(async (newUserData) => {
+    setUserState((prev) => {
+      const updated = typeof newUserData === 'function' ? newUserData(prev) : { ...prev, ...newUserData };
+      AsyncStorage.setItem('@solarguard_user', JSON.stringify(updated)).catch(() => {});
+      return updated;
+    });
+  }, []);
+
+  const logout = useCallback(async () => {
+    setIsAuthenticatedState(false);
+    try {
+      await AsyncStorage.removeItem('@solarguard_auth');
+    } catch (e) {
+      console.warn('Failed to clear auth session:', e);
+    }
+  }, []);
 
   // System Operational Telemetries
   const [systemOnline, setSystemOnline] = useState(true);
@@ -173,6 +235,7 @@ export const AppProvider = ({ children }) => {
 
   // ESP32 Hardware Integration State (Dual LDR, Servo Tracker, Relay Pump, DS18B20 Temp)
   const [pumpOn, setPumpOn] = useState(false);
+  const [wiperStatus, setWiperStatus] = useState('IDLE'); // 'IDLE', '30CM_FRONT', '30CM_BACK', 'PAUSED'
   const [espConfig, setEspConfig] = useState({
     ip: '192.168.194.44:5005', // Default PC Bridge or ESP32 Wi-Fi IP
     connected: false,
@@ -182,6 +245,7 @@ export const AppProvider = ({ children }) => {
     servoAngle: 90,
     hardwareTemp: 26.5,
     tempValid: true,
+    wiperStatus: 'IDLE',
   });
 
   const [invertRelay, setInvertRelay] = useState(false);
@@ -197,15 +261,19 @@ export const AppProvider = ({ children }) => {
 
   // Method to send pump ON/OFF command to ESP32 and update state
   const setPumpState = useCallback(async (state) => {
+    // Optimistically update local state immediately
     setPumpOn(state);
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
       const cleanHost = espConfig.ip.replace(/^https?:\/\//, '').trim();
-      const url = `http://${cleanHost}/pump?state=${state ? 1 : 0}&invert=${invertRelay ? 1 : 0}`;
+      const endpoint = state ? 'pump/on' : 'pump/off';
+      const url = `http://${cleanHost}/${endpoint}`;
       const res = await fetch(url, { signal: controller.signal });
       clearTimeout(timeoutId);
       if (res.ok) {
+        const data = await res.json();
+        console.log(`[ESP32] Pump command sent → ${state ? 'ON' : 'OFF'}, response:`, data);
         setEspConfig((prev) => ({
           ...prev,
           connected: true,
@@ -213,10 +281,49 @@ export const AppProvider = ({ children }) => {
         }));
       }
     } catch (err) {
-      // Non-blocking: allows local simulation/control even when ESP32 is offline
-      console.log('ESP32 pump command dispatched locally (hardware offline or IP unreachable)');
+      console.warn(`[ESP32] Bridge unreachable at ${espConfig.ip} — running in simulation mode`);
+      setEspConfig((prev) => ({ ...prev, connected: false }));
     }
-  }, [espConfig.ip, invertRelay]);
+  }, [espConfig.ip]);
+
+  // Wiper 30cm slider motor commands
+  const triggerWiperCycle = useCallback(async () => {
+    setWiperStatus('30CM_FRONT');
+    try {
+      const cleanHost = espConfig.ip.replace(/^https?:\/\//, '').trim();
+      await fetch(`http://${cleanHost}/wiper/cycle`);
+    } catch (e) {
+      console.warn('[ESP32] Wiper cycle dispatch error (simulation mode)');
+    }
+  }, [espConfig.ip]);
+
+  const triggerWiperForward = useCallback(async () => {
+    setWiperStatus('30CM_FRONT');
+    try {
+      const cleanHost = espConfig.ip.replace(/^https?:\/\//, '').trim();
+      await fetch(`http://${cleanHost}/wiper/forward`);
+    } catch (e) {
+      console.warn('[ESP32] Wiper forward dispatch error (simulation mode)');
+    }
+  }, [espConfig.ip]);
+
+  const triggerWiperBackward = useCallback(async () => {
+    setWiperStatus('30CM_BACK');
+    try {
+      const cleanHost = espConfig.ip.replace(/^https?:\/\//, '').trim();
+      await fetch(`http://${cleanHost}/wiper/backward`);
+    } catch (e) {
+      console.warn('[ESP32] Wiper backward dispatch error (simulation mode)');
+    }
+  }, [espConfig.ip]);
+
+  const triggerWiperStop = useCallback(async () => {
+    setWiperStatus('IDLE');
+    try {
+      const cleanHost = espConfig.ip.replace(/^https?:\/\//, '').trim();
+      await fetch(`http://${cleanHost}/wiper/stop`);
+    } catch (e) {}
+  }, [espConfig.ip]);
 
   const togglePump = useCallback(() => {
     setPumpState(!pumpOn);
@@ -242,6 +349,9 @@ export const AppProvider = ({ children }) => {
         if (typeof data.pump === 'boolean') {
           setPumpOn(data.pump);
         }
+        if (data.wiper) {
+          setWiperStatus(data.wiper);
+        }
         if (typeof data.servo === 'number') {
           setPanelAngle(Math.round(data.servo));
         }
@@ -257,6 +367,7 @@ export const AppProvider = ({ children }) => {
           servoAngle: typeof data.servo === 'number' ? Math.round(data.servo) : prev.servoAngle,
           hardwareTemp: typeof data.temp === 'number' ? +(data.temp.toFixed(1)) : prev.hardwareTemp,
           tempValid: data.tempValid !== undefined ? !!data.tempValid : true,
+          wiperStatus: data.wiper ?? prev.wiperStatus,
         }));
       }
     } catch (err) {
@@ -408,6 +519,7 @@ export const AppProvider = ({ children }) => {
     }
     setIsCleaningActive(true);
     setPumpState(true);
+    triggerWiperCycle(); // Pin 27: 30cm front & back cycle
     setCleaningTimer(totalSteps);
     setCleaningProgress(0);
     setCleaningStatusText(`Initializing ${mode} on ${zone}...`);
@@ -433,6 +545,7 @@ export const AppProvider = ({ children }) => {
         cleaningIntervalRef.current = null;
         setIsCleaningActive(false);
         setPumpState(false);
+    triggerWiperStop();
         setCleaningProgress(100);
         setCleaningStatusText('Completed');
         setDustLevel((prev) => Math.max(3, Math.round(prev * 0.15)));
@@ -463,6 +576,7 @@ export const AppProvider = ({ children }) => {
     }
     setIsCleaningActive(false);
     setPumpState(false);
+    triggerWiperStop();
     setCleaningStatusText('Aborted by user');
   };
 
@@ -508,6 +622,9 @@ export const AppProvider = ({ children }) => {
       value={{
         isAuthenticated,
         setIsAuthenticated,
+        isAuthLoading,
+        setUser,
+        logout,
         user,
         systemOnline,
         setSystemOnline,
@@ -556,6 +673,11 @@ export const AppProvider = ({ children }) => {
         pumpOn,
         setPumpState,
         togglePump,
+        wiperStatus,
+        triggerWiperCycle,
+        triggerWiperForward,
+        triggerWiperBackward,
+        triggerWiperStop,
         espConfig,
         updateEspIp,
         syncHardwareStatus,

@@ -9,8 +9,11 @@ import { useApp } from '../context/AppContext';
 export const EnergyAnalyticsScreen = ({ navigation }) => {
   const { todayEnergy, efficiency, temperature, currentPower } = useApp();
   const [selectedTimeframe, setSelectedTimeframe] = useState('Hourly');
+  const [activeChip, setActiveChip] = useState('Current');
+  const [selectedDateIndex, setSelectedDateIndex] = useState(0);
 
   const timeframes = ['Hourly', 'Daily', 'Weekly', 'Monthly', 'Yearly'];
+  const dates = ['Today, May 11, 2025', 'Yesterday, May 10, 2025', 'May 9, 2025'];
 
   // Data sets for different timeframes
   const chartData = {
@@ -19,6 +22,10 @@ export const EnergyAnalyticsScreen = ({ navigation }) => {
     Weekly: [95, 110, 125, 118, 130, 122, 128],
     Monthly: [450, 480, 510, 495, 520, 505],
     Yearly: [5.2, 5.8, 6.1, 5.9, 6.4],
+  };
+
+  const handleNextDate = () => {
+    setSelectedDateIndex((prev) => (prev + 1) % dates.length);
   };
 
   return (
@@ -44,10 +51,10 @@ export const EnergyAnalyticsScreen = ({ navigation }) => {
         </View>
 
         {/* Date Selector Bar */}
-        <View style={styles.dateBar}>
-          <Text style={styles.dateText}>May 11, 2025</Text>
+        <TouchableOpacity style={styles.dateBar} onPress={handleNextDate} activeOpacity={0.8}>
+          <Text style={styles.dateText}>{dates[selectedDateIndex]}</Text>
           <Ionicons name="calendar-outline" size={18} color={Colors.primaryDark} />
-        </View>
+        </TouchableOpacity>
 
         {/* Chart Card */}
         <View style={styles.chartCard}>
@@ -62,28 +69,43 @@ export const EnergyAnalyticsScreen = ({ navigation }) => {
                 ? ['00:00', '06:00', '12:00', '18:00', '24:00']
                 : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
             }
-            peakValue={`${currentPower} kW`}
+            peakValue={`${currentPower || 2.45} kW`}
             peakTime="12:00 PM"
           />
 
           {/* Telemetry Chips Bar */}
           <View style={styles.chipsRow}>
-            <View style={styles.chip}>
-              <Text style={styles.chipLabel}>Voltage</Text>
-              <Text style={styles.chipVal}>234.5 V</Text>
-            </View>
-            <View style={[styles.chip, styles.activeChip]}>
-              <Text style={[styles.chipLabel, { color: Colors.primary }]}>Current</Text>
-              <Text style={[styles.chipVal, { color: Colors.primary }]}>10.5 A</Text>
-            </View>
-            <View style={styles.chip}>
-              <Text style={styles.chipLabel}>Temp.</Text>
-              <Text style={styles.chipVal}>{temperature} °C</Text>
-            </View>
-            <View style={styles.chip}>
-              <Text style={styles.chipLabel}>Power</Text>
-              <Text style={styles.chipVal}>{currentPower} kW</Text>
-            </View>
+            <TouchableOpacity
+              style={[styles.chip, activeChip === 'Voltage' && styles.activeChip]}
+              onPress={() => setActiveChip('Voltage')}
+            >
+              <Text style={[styles.chipLabel, activeChip === 'Voltage' && { color: Colors.primary }]}>Voltage</Text>
+              <Text style={[styles.chipVal, activeChip === 'Voltage' && { color: Colors.primary }]}>234.5 V</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.chip, activeChip === 'Current' && styles.activeChip]}
+              onPress={() => setActiveChip('Current')}
+            >
+              <Text style={[styles.chipLabel, activeChip === 'Current' && { color: Colors.primary }]}>Current</Text>
+              <Text style={[styles.chipVal, activeChip === 'Current' && { color: Colors.primary }]}>10.5 A</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.chip, activeChip === 'Temp' && styles.activeChip]}
+              onPress={() => setActiveChip('Temp')}
+            >
+              <Text style={[styles.chipLabel, activeChip === 'Temp' && { color: Colors.primary }]}>Temp.</Text>
+              <Text style={[styles.chipVal, activeChip === 'Temp' && { color: Colors.primary }]}>{temperature || 28} °C</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.chip, activeChip === 'Power' && styles.activeChip]}
+              onPress={() => setActiveChip('Power')}
+            >
+              <Text style={[styles.chipLabel, activeChip === 'Power' && { color: Colors.primary }]}>Power</Text>
+              <Text style={[styles.chipVal, activeChip === 'Power' && { color: Colors.primary }]}>{currentPower || 2.45} kW</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -100,7 +122,7 @@ export const EnergyAnalyticsScreen = ({ navigation }) => {
 
             <View style={styles.summaryBox}>
               <Text style={styles.summaryLabel}>Total Energy</Text>
-              <Text style={styles.summaryValue}>{todayEnergy} kWh</Text>
+              <Text style={styles.summaryValue}>{todayEnergy || 14.8} kWh</Text>
               <Text style={styles.summarySub}>Today</Text>
             </View>
 
@@ -112,7 +134,7 @@ export const EnergyAnalyticsScreen = ({ navigation }) => {
 
             <View style={styles.summaryBox}>
               <Text style={styles.summaryLabel}>Efficiency</Text>
-              <Text style={styles.summaryValue}>{efficiency}%</Text>
+              <Text style={styles.summaryValue}>{efficiency || 96.5}%</Text>
               <Text style={styles.summarySub}>Today</Text>
             </View>
           </View>
@@ -133,7 +155,6 @@ const styles = StyleSheet.create({
   },
   timeframeContainer: {
     flexDirection: 'row',
-    backgroundColor: '#EAEFE structure border',
     backgroundColor: '#E2E8F0',
     borderRadius: 20,
     padding: 3,

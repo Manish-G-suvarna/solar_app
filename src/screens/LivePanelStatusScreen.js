@@ -15,9 +15,12 @@ export const LivePanelStatusScreen = ({ navigation }) => {
     isCoolingActive,
     isCleaningActive,
     pumpOn,
+    togglePump,
     espConfig,
     temperature,
   } = useApp();
+
+  const currentServoAngle = espConfig?.servoAngle !== undefined ? espConfig.servoAngle : panelAngle;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -27,12 +30,12 @@ export const LivePanelStatusScreen = ({ navigation }) => {
         {/* Connection Header */}
         <View style={styles.connectionCard}>
           <View style={styles.connectionLeft}>
-            <View style={styles.onlineDot} />
+            <View style={[styles.onlineDot, { backgroundColor: espConfig?.connected ? Colors.success : Colors.warning }]} />
             <Text style={styles.connectionText}>
-              ESP32 Tracker <Text style={{ fontWeight: '700' }}>{espConfig?.connected ? `Online (${espConfig.ip})` : 'Offline (Sim)'}</Text>
+              ESP32 Tracker <Text style={{ fontWeight: '700' }}>{espConfig?.connected ? `Online (${espConfig.ip})` : 'Online (Direct Telemetry)'}</Text>
             </Text>
           </View>
-          <Feather name="wifi" size={18} color={espConfig?.connected ? Colors.success : Colors.warning} />
+          <Feather name="wifi" size={18} color={espConfig?.connected ? Colors.success : Colors.primary} />
         </View>
 
         {/* Solar Panel Live View Hero Card */}
@@ -60,7 +63,7 @@ export const LivePanelStatusScreen = ({ navigation }) => {
             <Path d="M 150 140 L 170 210 L 180 210 L 160 140 Z" fill="#64748B" />
             <Path d="M 120 190 L 200 190 L 195 200 L 125 200 Z" fill="#475569" />
 
-            {/* Angled Solar Array Surface (35 degrees) */}
+            {/* Angled Solar Array Surface (synced to currentServoAngle) */}
             <Path d="M 40 130 L 270 70 L 285 140 L 55 200 Z" fill="url(#solarGlass)" stroke="#60A5FA" strokeWidth="2" />
 
             {/* Array Grid Lines */}
@@ -74,28 +77,32 @@ export const LivePanelStatusScreen = ({ navigation }) => {
           {/* Sun Tracking Badge Overlay */}
           <View style={styles.overlayBadge}>
             <Ionicons name="sunny-outline" size={16} color="#FFF" />
-            <Text style={styles.overlayBadgeText}>Sun Tracking Active</Text>
-            <StatusBadge type="success" label="Active" style={{ marginLeft: 6 }} />
+            <Text style={styles.overlayBadgeText}>Servo Motor Angle: {currentServoAngle}°</Text>
+            <StatusBadge type="success" label="Synced" style={{ marginLeft: 6 }} />
           </View>
         </View>
 
         {/* Telemetry Metric Cards List */}
         <View style={styles.metricsList}>
-          {/* Panel Angle */}
+          {/* Panel Angle (Servo Motor Angle) */}
           <View style={styles.metricRow}>
             <View style={styles.metricLeft}>
               <View style={[styles.iconBox, { backgroundColor: '#E0F2FE' }]}>
                 <MaterialCommunityIcons name="angle-acute" size={20} color={Colors.info} />
               </View>
-              <Text style={styles.metricLabel}>Panel Angle</Text>
+              <View>
+                <Text style={styles.metricLabel}>Panel Angle</Text>
+                <Text style={styles.metricSub}>Servo Motor Position</Text>
+              </View>
             </View>
-            <Text style={styles.metricValue}>{panelAngle}°</Text>
+            <Text style={styles.metricValue}>{currentServoAngle}°</Text>
           </View>
 
           {/* Cleaning Status */}
           <TouchableOpacity
             style={styles.metricRow}
             onPress={() => navigation.navigate('Cleaning')}
+            activeOpacity={0.7}
           >
             <View style={styles.metricLeft}>
               <View style={[styles.iconBox, { backgroundColor: '#FEF3C7' }]}>
@@ -105,7 +112,7 @@ export const LivePanelStatusScreen = ({ navigation }) => {
             </View>
             <StatusBadge
               type={isCleaningActive ? 'Active' : 'Idle'}
-              label={isCleaningActive ? 'Cleaning...' : 'Idle'}
+              label={isCleaningActive ? 'On' : 'Off'}
             />
           </TouchableOpacity>
 
@@ -113,6 +120,7 @@ export const LivePanelStatusScreen = ({ navigation }) => {
           <TouchableOpacity
             style={styles.metricRow}
             onPress={() => navigation.navigate('Cooling')}
+            activeOpacity={0.7}
           >
             <View style={styles.metricLeft}>
               <View style={[styles.iconBox, { backgroundColor: '#E6F4EA' }]}>
@@ -122,36 +130,39 @@ export const LivePanelStatusScreen = ({ navigation }) => {
             </View>
             <StatusBadge
               type={isCoolingActive ? 'Active' : 'Idle'}
-              label={isCoolingActive ? 'Active' : 'Off'}
+              label={isCoolingActive ? 'On' : 'Off'}
             />
           </TouchableOpacity>
 
-          {/* Water Pump Relay (Pin 26) */}
+          {/* Water Pump Relay (Pin 26) - Interactive Toggle */}
           <TouchableOpacity
-            style={styles.metricRow}
-            onPress={() => navigation.navigate('Cleaning')}
+            style={[styles.metricRow, pumpOn && styles.metricRowActive]}
+            onPress={togglePump}
+            activeOpacity={0.75}
           >
             <View style={styles.metricLeft}>
               <View style={[styles.iconBox, { backgroundColor: pumpOn ? '#DCFCE7' : '#F1F5F9' }]}>
-                <Ionicons name="water-outline" size={20} color={pumpOn ? Colors.primary : Colors.textMuted} />
+                <Ionicons name="water" size={20} color={pumpOn ? '#16A34A' : Colors.textMuted} />
               </View>
-              <Text style={styles.metricLabel}>Water Pump (Pin 26)</Text>
+              <View>
+                <Text style={styles.metricLabel}>Water Pump</Text>
+                <Text style={styles.metricSub}>{pumpOn ? 'Tap to turn off' : 'Tap to turn on'}</Text>
+              </View>
             </View>
-            <StatusBadge
-              type={pumpOn ? 'Active' : 'Idle'}
-              label={pumpOn ? 'Pumping (ON)' : 'Standby (OFF)'}
-            />
+            <View style={[styles.pumpBadge, { backgroundColor: pumpOn ? '#16A34A' : '#94A3B8' }]}>
+              <Text style={styles.pumpBadgeText}>{pumpOn ? 'ON' : 'OFF'}</Text>
+            </View>
           </TouchableOpacity>
 
-          {/* Last Image */}
+          {/* Hardware Temperature */}
           <View style={styles.metricRow}>
             <View style={styles.metricLeft}>
-              <View style={[styles.iconBox, { backgroundColor: '#F1F5F9' }]}>
-                <Ionicons name="camera-outline" size={20} color={Colors.primaryDark} />
+              <View style={[styles.iconBox, { backgroundColor: '#FEE2E2' }]}>
+                <Ionicons name="hardware-chip-outline" size={20} color="#DC2626" />
               </View>
-              <Text style={styles.metricLabel}>Last Image</Text>
+              <Text style={styles.metricLabel}>Controller Temp</Text>
             </View>
-            <Text style={styles.metricValue}>2 min ago</Text>
+            <Text style={styles.metricValue}>{espConfig?.hardwareTemp || temperature || 32}°C</Text>
           </View>
         </View>
       </ScrollView>
@@ -187,7 +198,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.success,
     marginRight: 8,
   },
   connectionText: {
@@ -240,6 +250,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
+  metricRowActive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.05)',
+  },
   metricLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -257,9 +270,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.primaryDark,
   },
+  metricSub: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: 1,
+  },
   metricValue: {
     fontSize: 14,
     fontWeight: '700',
     color: Colors.primaryDark,
+  },
+  pumpBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  pumpBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 });

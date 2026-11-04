@@ -43,6 +43,11 @@ export const CleaningScreen = ({ navigation }) => {
     syncHardwareStatus,
     invertRelay,
     toggleInvertRelay,
+    wiperStatus,
+    triggerWiperCycle,
+    triggerWiperForward,
+    triggerWiperBackward,
+    triggerWiperStop,
   } = useApp();
 
   const selectedMode = 'Standard Wash';
@@ -92,14 +97,20 @@ export const CleaningScreen = ({ navigation }) => {
 
   const handleManualJog = (direction) => {
     if (isCleaningActive) return;
-    if (direction === 'Left') {
-      setJogFeedback('Wipers manually jogged 25 cm Left ◀');
-    } else if (direction === 'Right') {
-      setJogFeedback('Wipers manually jogged 25 cm Right ▶');
+    if (direction === 'Left' || direction === 'Back') {
+      triggerWiperBackward();
+      setJogFeedback('Wiper Motor (Pin 27) returning 30 cm Back (Anti-Clockwise) ◀');
+    } else if (direction === 'Right' || direction === 'Front') {
+      triggerWiperForward();
+      setJogFeedback('Wiper Motor (Pin 27) moving 30 cm Front (Clockwise) ▶');
+    } else if (direction === 'Cycle') {
+      triggerWiperCycle();
+      setJogFeedback('Wiper Motor running full 30 cm Front & Back Cycle 🔁');
     } else {
-      setJogFeedback('Robotic wipers safely locked in Park Position ⏏');
+      triggerWiperStop();
+      setJogFeedback('Wiper Motor safely stopped / parked ⏏');
     }
-    setTimeout(() => setJogFeedback(null), 3000);
+    setTimeout(() => setJogFeedback(null), 4000);
   };
 
   const isAutoMode = settings.systemMode === 'Automatic';
@@ -578,12 +589,50 @@ export const CleaningScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Manual Robotic Wiper Jog Controller */}
-        <Text style={styles.sectionTitle}>5. Manual Wiper Jog Pad</Text>
+        {/* Manual Robotic Wiper Jog Controller (GPIO 27) */}
+        <Text style={styles.sectionTitle}>5. Wiper Slider Motor (GPIO 27 - 30cm Travel)</Text>
         <View style={styles.jogCard}>
-          <Text style={styles.jogSub}>
-            Manually calibrate wiper position or park robotic arm safely:
-          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <Text style={[styles.jogSub, { marginBottom: 0 }]}>
+              Control 30 cm travel front & back across panel array:
+            </Text>
+            <View style={{
+              backgroundColor: wiperStatus && wiperStatus !== 'IDLE' ? '#8B5CF6' : '#F1F5F9',
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              borderRadius: 8,
+            }}>
+              <Text style={{
+                fontSize: 10,
+                fontWeight: '800',
+                color: wiperStatus && wiperStatus !== 'IDLE' ? '#FFFFFF' : '#64748B'
+              }}>
+                {wiperStatus && wiperStatus !== 'IDLE' ? `WIPER: ${wiperStatus}` : 'WIPER: IDLE'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Dedicated 30cm Front & Back One-Touch Cycle Button */}
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#8B5CF6',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              borderRadius: 12,
+              marginBottom: 10,
+              gap: 8,
+            }}
+            onPress={() => handleManualJog('Cycle')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="repeat" size={20} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>
+              Run 30 cm Front & Back Cycle (CW & CCW)
+            </Text>
+          </TouchableOpacity>
 
           <View style={styles.jogButtonsRow}>
             <TouchableOpacity
@@ -592,7 +641,7 @@ export const CleaningScreen = ({ navigation }) => {
               activeOpacity={0.75}
             >
               <Ionicons name="arrow-back" size={18} color={Colors.primaryDark} />
-              <Text style={styles.jogBtnText}>Sweep Left</Text>
+              <Text style={styles.jogBtnText}>30cm Back ◀</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -600,8 +649,8 @@ export const CleaningScreen = ({ navigation }) => {
               onPress={() => handleManualJog('Park')}
               activeOpacity={0.75}
             >
-              <Ionicons name="lock-closed-outline" size={18} color="#FFFFFF" />
-              <Text style={styles.jogBtnParkText}>Park Arm</Text>
+              <Ionicons name="stop-circle" size={18} color="#FFFFFF" />
+              <Text style={styles.jogBtnParkText}>Stop</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -609,7 +658,7 @@ export const CleaningScreen = ({ navigation }) => {
               onPress={() => handleManualJog('Right')}
               activeOpacity={0.75}
             >
-              <Text style={styles.jogBtnText}>Sweep Right</Text>
+              <Text style={styles.jogBtnText}>30cm Front ▶</Text>
               <Ionicons name="arrow-forward" size={18} color={Colors.primaryDark} />
             </TouchableOpacity>
           </View>

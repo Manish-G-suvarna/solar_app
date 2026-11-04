@@ -158,7 +158,11 @@ export const DashboardScreen = ({ navigation }) => {
         <View style={styles.weatherCard}>
           {/* Top row: icon + temp + location controls */}
           <View style={styles.weatherTopRow}>
-            <View style={styles.weatherLeft}>
+            <TouchableOpacity
+              style={styles.weatherLeft}
+              onPress={() => navigation.navigate('WeatherForecast')}
+              activeOpacity={0.7}
+            >
               {weatherLoading ? (
                 <ActivityIndicator size={38} color={Colors.primary} />
               ) : (
@@ -172,7 +176,7 @@ export const DashboardScreen = ({ navigation }) => {
                   {weatherError ? 'Unavailable' : (weather.description || weather.condition)}
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
 
             <View style={styles.weatherTopRight}>
               <TouchableOpacity
@@ -217,7 +221,11 @@ export const DashboardScreen = ({ navigation }) => {
 
           {/* Bottom row: humidity / wind / feels like */}
           {!weatherError && (
-            <View style={styles.weatherStats}>
+            <TouchableOpacity
+              style={styles.weatherStats}
+              onPress={() => navigation.navigate('WeatherForecast')}
+              activeOpacity={0.75}
+            >
               <View style={styles.weatherStat}>
                 <Ionicons name="water-outline" size={14} color="#60A5FA" />
                 <Text style={styles.weatherStatVal}>{weather.humidity}%</Text>
@@ -235,8 +243,21 @@ export const DashboardScreen = ({ navigation }) => {
                 <Text style={styles.weatherStatVal}>{weather.feelsLike}°C</Text>
                 <Text style={styles.weatherStatLabel}>Feels Like</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           )}
+
+          {/* 7-Day Forecast & Solar Potential Tap Banner */}
+          <TouchableOpacity
+            style={styles.forecastBanner}
+            onPress={() => navigation.navigate('WeatherForecast')}
+            activeOpacity={0.75}
+          >
+            <View style={styles.forecastBannerLeft}>
+              <Ionicons name="calendar" size={14} color="#F59E0B" />
+              <Text style={styles.forecastBannerText}>Next 7 Days Weather & Solar Forecast</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={15} color="#F59E0B" />
+          </TouchableOpacity>
 
           {weatherError && (
             <Text style={styles.weatherErrorText}>
@@ -707,6 +728,26 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: '#E2E8F0',
     alignSelf: 'stretch',
+  },
+  forecastBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginTop: 12,
+  },
+  forecastBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  forecastBannerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#92400E',
   },
   weatherErrorText: {
     fontSize: 11,

@@ -15,7 +15,24 @@ import { Colors } from '../theme/colors';
 import { useApp } from '../context/AppContext';
 
 export const SettingsScreen = ({ navigation }) => {
-  const { settings, updateSetting, location, setSystemOnline } = useApp();
+  const { settings, updateSetting, location, setSystemOnline, logout, user } = useApp();
+
+  const handleLogout = () => {
+    Alert.alert('Log Out', 'Are you sure you want to log out of SolarGuard?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log Out',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Welcome' }],
+          });
+        },
+      },
+    ]);
+  };
 
   const handleSystemReset = () => {
     Alert.alert(
@@ -66,16 +83,34 @@ export const SettingsScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
 
+          {/* Tracking */}
+          <View style={styles.settingRow}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="compass-outline" size={20} color={Colors.accent} />
+              <Text style={styles.rowLabel}>Sun Tracking</Text>
+            </View>
+            <Switch
+              value={settings.trackingMode === 'Dual-Axis'}
+              onValueChange={(val) =>
+                updateSetting('trackingMode', val ? 'Dual-Axis' : 'Single-Axis')
+              }
+              trackColor={{ false: '#CBD5E1', true: Colors.accent }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
           {/* Dust Threshold */}
           <TouchableOpacity
             style={styles.settingRow}
-            onPress={() => updateSetting('dustThreshold', (settings.dustThreshold + 5) % 50 || 15)}
+            onPress={() =>
+              updateSetting('dustThreshold', (settings.dustThreshold + 5) % 60 || 20)
+            }
           >
             <View style={styles.rowLeft}>
-              <Ionicons name="sparkles-outline" size={20} color={Colors.warning} />
+              <Ionicons name="leaf-outline" size={20} color={Colors.warning} />
               <Text style={styles.rowLabel}>Dust Threshold</Text>
             </View>
-            <Text style={[styles.rowValue, { color: Colors.success, fontWeight: '700' }]}>
+            <Text style={[styles.rowValue, { color: Colors.warning, fontWeight: '700' }]}>
               {settings.dustThreshold}%
             </Text>
           </TouchableOpacity>
@@ -83,13 +118,15 @@ export const SettingsScreen = ({ navigation }) => {
           {/* Temp Threshold */}
           <TouchableOpacity
             style={styles.settingRow}
-            onPress={() => updateSetting('tempThreshold', (settings.tempThreshold + 5) % 60 || 35)}
+            onPress={() =>
+              updateSetting('tempThreshold', (settings.tempThreshold + 5) % 70 || 40)
+            }
           >
             <View style={styles.rowLeft}>
               <Ionicons name="thermometer-outline" size={20} color={Colors.danger} />
               <Text style={styles.rowLabel}>Temp. Threshold</Text>
             </View>
-            <Text style={[styles.rowValue, { color: Colors.success, fontWeight: '700' }]}>
+            <Text style={[styles.rowValue, { color: Colors.danger, fontWeight: '700' }]}>
               {settings.tempThreshold}°C
             </Text>
           </TouchableOpacity>
@@ -98,11 +135,11 @@ export const SettingsScreen = ({ navigation }) => {
           <TouchableOpacity
             style={styles.settingRow}
             onPress={() =>
-              updateSetting('cleaningDuration', (settings.cleaningDuration + 5) % 40 || 10)
+              updateSetting('cleaningDuration', (settings.cleaningDuration + 5) % 35 || 10)
             }
           >
             <View style={styles.rowLeft}>
-              <Ionicons name="timer-outline" size={20} color={Colors.primary} />
+              <Ionicons name="water-outline" size={20} color={Colors.success} />
               <Text style={styles.rowLabel}>Cleaning Duration</Text>
             </View>
             <Text style={[styles.rowValue, { color: Colors.success, fontWeight: '700' }]}>
@@ -121,73 +158,132 @@ export const SettingsScreen = ({ navigation }) => {
               <Ionicons name="time-outline" size={20} color={Colors.info} />
               <Text style={styles.rowLabel}>Cooling Duration</Text>
             </View>
-            <Text style={[styles.rowValue, { color: Colors.success, fontWeight: '700' }]}>
+            <Text style={[styles.rowValue, { color: Colors.info, fontWeight: '700' }]}>
               {settings.coolingDuration} min
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* General Section */}
-        <Text style={styles.sectionHeaderTitle}>General</Text>
+        {/* Device & Hardware Section */}
+        <Text style={styles.sectionHeaderTitle}>Hardware &amp; Connectivity</Text>
 
         <View style={styles.sectionCard}>
-          {/* Notifications Toggle */}
           <View style={styles.settingRow}>
             <View style={styles.rowLeft}>
-              <Ionicons name="notifications-outline" size={20} color={Colors.primaryDark} />
-              <Text style={styles.rowLabel}>Notifications</Text>
+              <Ionicons name="hardware-chip-outline" size={20} color={Colors.primaryDark} />
+              <Text style={styles.rowLabel}>Controller Unit</Text>
+            </View>
+            <Text style={styles.rowValue}>ESP32-WROOM</Text>
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="wifi-outline" size={20} color={Colors.success} />
+              <Text style={styles.rowLabel}>Bridge Link</Text>
+            </View>
+            <Text style={[styles.rowValue, { color: Colors.success, fontWeight: '700' }]}>
+              WebSocket:5005
+            </Text>
+          </View>
+
+          <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="location-outline" size={20} color={Colors.primary} />
+              <Text style={styles.rowLabel}>Site Location</Text>
+            </View>
+            <Text style={styles.rowValue}>{location || 'Bangalore, India'}</Text>
+          </View>
+        </View>
+
+        {/* Notifications & Alert Preferences */}
+        <Text style={styles.sectionHeaderTitle}>Notifications &amp; Alerts</Text>
+
+        <View style={styles.sectionCard}>
+          <View style={styles.settingRow}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="notifications-outline" size={20} color={Colors.primary} />
+              <Text style={styles.rowLabel}>Push Notifications</Text>
             </View>
             <Switch
               value={settings.notificationsEnabled}
               onValueChange={(val) => updateSetting('notificationsEnabled', val)}
-              trackColor={{ false: '#CBD5E1', true: '#A7F3D0' }}
-              thumbColor={settings.notificationsEnabled ? Colors.primary : '#F1F5F9'}
+              trackColor={{ false: '#CBD5E1', true: Colors.primary }}
+              thumbColor="#FFFFFF"
             />
           </View>
 
-          {/* Location */}
-          <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => navigation.navigate('Dashboard')}
-          >
+          <View style={styles.settingRow}>
             <View style={styles.rowLeft}>
-              <Ionicons name="location-outline" size={20} color={Colors.primaryDark} />
-              <Text style={styles.rowLabel}>Location</Text>
+              <Ionicons name="alert-circle-outline" size={20} color={Colors.warning} />
+              <Text style={styles.rowLabel}>Soiling Alerts</Text>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={[styles.rowValue, { color: Colors.primary, marginRight: 6 }]}>
-                {location}
+            <Switch
+              value={settings.soilingAlerts}
+              onValueChange={(val) => updateSetting('soilingAlerts', val)}
+              trackColor={{ false: '#CBD5E1', true: Colors.warning }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
+          <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="flame-outline" size={20} color={Colors.danger} />
+              <Text style={styles.rowLabel}>Thermal Overheat Alerts</Text>
+            </View>
+            <Switch
+              value={settings.overheatAlerts}
+              onValueChange={(val) => updateSetting('overheatAlerts', val)}
+              trackColor={{ false: '#CBD5E1', true: Colors.danger }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        </View>
+
+        {/* Account & Session Section */}
+        <Text style={styles.sectionHeaderTitle}>Account &amp; Session</Text>
+        <View style={styles.sectionCard}>
+          <View style={styles.settingRow}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="person-outline" size={20} color={Colors.primaryDark} />
+              <Text style={styles.rowLabel}>{user?.name || 'SolarGuard Operator'}</Text>
+            </View>
+            <Text style={styles.rowValue}>{user?.email || 'operator@solarguard.io'}</Text>
+          </View>
+
+          {user?.siteName ? (
+            <View style={styles.settingRow}>
+              <View style={styles.rowLeft}>
+                <Ionicons name="home-outline" size={20} color={Colors.accent} />
+                <Text style={styles.rowLabel}>Site Array</Text>
+              </View>
+              <Text style={[styles.rowValue, { color: Colors.primaryDark, fontWeight: '600' }]}>
+                {user.siteName}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
             </View>
-          </TouchableOpacity>
-
-          {/* Camera Settings */}
-          <TouchableOpacity style={styles.settingRow}>
-            <View style={styles.rowLeft}>
-              <Ionicons name="camera-outline" size={20} color={Colors.primaryDark} />
-              <Text style={styles.rowLabel}>Camera Settings</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-          </TouchableOpacity>
-
-          {/* User Permissions */}
-          <TouchableOpacity style={styles.settingRow}>
-            <View style={styles.rowLeft}>
-              <Ionicons name="shield-checkmark-outline" size={20} color={Colors.primaryDark} />
-              <Text style={styles.rowLabel}>User Permissions</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-          </TouchableOpacity>
+          ) : null}
 
           {/* System Reset */}
           <TouchableOpacity
-            style={[styles.settingRow, { borderBottomWidth: 0 }]}
+            style={styles.settingRow}
             onPress={handleSystemReset}
           >
             <View style={styles.rowLeft}>
               <Ionicons name="refresh-circle-outline" size={20} color={Colors.danger} />
               <Text style={[styles.rowLabel, { color: Colors.danger }]}>System Reset</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={Colors.danger} />
+          </TouchableOpacity>
+
+          {/* Log Out */}
+          <TouchableOpacity
+            style={[styles.settingRow, { borderBottomWidth: 0 }]}
+            onPress={handleLogout}
+          >
+            <View style={styles.rowLeft}>
+              <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
+              <Text style={[styles.rowLabel, { color: Colors.danger, fontWeight: '700' }]}>
+                Log Out
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={Colors.danger} />
           </TouchableOpacity>
